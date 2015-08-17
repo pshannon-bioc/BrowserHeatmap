@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+   <title>BrowserHeatmap</title>
+   <script src="http://oncoscape.sttrcancer.org/oncoscape/js/jquery-2.1.1.js"></script>
+   <script src="http://oncoscape.sttrcancer.org/oncoscape/js/BrowserViz.js"></script>
+   <script src="http://s3.amazonaws.com/oncoscape/js/d3.min.js"></script>
+
+<style>
+
+.center {
+   margin-left: auto;
+   margin-right: auto;
+   width: 70%;
+   background-color: #b0e0e6;
+   }
+
+#browserHeatmapDiv {
+  background-color: #F0F0F0;
+  position: relative;
+  height: 400px;
+  width: 600px;
+  border: 1px solid #aaa;
+  border-radius: 5px;
+  margin-right: auto;
+  margin-left: auto;
+  margin-top: 20px;
+  margin-bottom: auto;
+  padding: 0px;
+  }
+
+.extent {
+  fill-opacity: .1;
+  stroke: #f00;
+  }
+
+.domain { 
+  fill: none; 
+  stroke: black; 
+  stroke-width; 1; 
+  } 
+
+</style>
+
+<script>
+//----------------------------------------------------------------------------------------------------
+var BrowserHeatmap = (function(){
+
+   var dispatchOptions = {};
+   var onReadyFunctions = [];
+   var plotDiv;
+   var d3plotDiv;
+   var selectedRegion;          // assigned out of brushReader function
+   var dataReceived = false;    // when true, window resize does replot of data
+   var dataset;                 // assigned from payload of incoming plotxy message
+   var xMin, xMax, yMin, yMax;  // conveniently calculated in R, part of payload
+   var datasetLength;
+
+   var hub;                     // defined in BrowserViz.js, has lots of helpful socket
+                                // and message support
+
+//----------------------------------------------------------------------------------------------------
+function setHub(newHub)
+{
+   hub = newHub;
+
+} // setHub
+//----------------------------------------------------------------------------------------------------
+function addMessageHandlers()
+{
+   hub.addMessageHandler("plotxy", d3plotPrep);
+   hub.addMessageHandler("getSelection", getSelection);
+   //hub.addMessageHandler("selectPoints", selectPoints);
+
+} // addMessageHandlers
+//----------------------------------------------------------------------------------------------------
+// called out of the hub once the web page (the DOM) is ready (fully loaded)
+function initializeUI()
+{
+   plotDiv = $("#browserHeatmapDiv");
+   d3plotDiv = d3.select("#browserHeatmapDiv");
+   console.log("div: " + plotDiv)
+   $(window).resize(handleWindowResize);
+   handleWindowResize();
+
+}  // initializeUI
+//----------------------------------------------------------------------------------------------------
+function handleWindowResize ()
+{
+   plotDiv.width(0.95 * $(window).width());
+   plotDiv.height(0.90 * $(window).height());
+
+      // an easy way to rescale the canvas when the browser window size changes: just redraw
+   if(dataReceived)
+      d3plot(dataset, xMin, xMax, yMin, yMax);
+
+} // handleWindowResize
+//--------------------------------------------------------------------------------
+function ready(msg)
+{
+   var return_msg = {cmd: msg.callback, status: "success", callback: "", 
+                     payload: "BrowserHeatmap ready"};
+   hub.send(return_msg);
+
+} // ready
+//----------------------------------------------------------------------------------------------------
+function getBrowserInfo(msg)
+{
+   var return_msg = {cmd: msg.callback, status: "success", callback: "", 
+                     payload: navigator.userAgent};
+   hub.send(return_msg);
+
+} // getBrowserInfo
+//----------------------------------------------------------------------------------------------------
+function getWindowTitle(msg)
+{
+   var return_msg = {cmd: msg.callback, status: "success", callback: "", 
+                     payload: window.document.title};
+   hub.send(return_msg);
+
+} // getWindowTitle
+//----------------------------------------------------------------------------------------------------
+function setWindowTitle(msg)
+{
+   console.log(msg)
+   var payload = msg.payload;
+   console.log(payload)
+   var newTitle = payload.title;
+   window.document.title = newTitle;
+
+   var return_msg = {cmd: msg.callback, status: "success", callback: "", payload: window.document.title};
+   hub.send(return_msg);
+
+} // setWindowTitle
+//----------------------------------------------------------------------------------------------------
+function getWindowSize(msg)
+{
+   var width = $(window).width()
+   var height = $(window).height()
+   var return_msg = {cmd: msg.callback, status: "success", 
+                     callback: "", payload: JSON.stringify({width:width, height: height})};
+   hub.send(return_msg);
+
+} // getWindowSize
+//----------------------------------------------------------------------------------------------------
+$(document).ready(function() {
+
+   plotDiv = $("#browserHeatmapDiv");
+   d3plotDiv = d3.select("#browserHeatmapDiv");
+   console.log("div: " + plotDiv)
+
+   $(window).resize(handleWindowResize);
+   handleWindowResize();
+
+   }) // document.ready
+
+//----------------------------------------------------------------------------------------------------
+function brushReader ()
+{
+  console.log("brushReader");
+  selectedRegion = d3brush.extent();
+  x0 = selectedRegion[0][0];
+  x1 = selectedRegion[1][0];
+  width = Math.abs(x0-x1);
+  if(width < 1)
+     selectedRegion = null
+
+}; // d3PlotBrushReader
+//--------------------------------------------------------------------------------
+function d3plotPrep (msg)
+{
+   payload = msg.payload;
+   dataReceived = true;
+
+      // assign global variables
+
+   dataset = [];
+   datasetLength = payload.x.length
+
+   for(var i=0; i < datasetLength; i++){
+     dataset.push({x: payload.x[i], y: payload.y[i]});
+     }
+
+   xMin = msg.payload.xMin;
+   xMax = msg.payload.xMax;
+   yMin = msg.payload.yMin;
+   yMax = msg.payload.yMax;
+
+   d3plot(dataset, xMin, xMax, yMin, yMax)
+
+   var return_msg = {cmd: msg.callback, status: "success", callback: "", payload: ""};
+   hub.send(return_msg);
+
+} // d3plotPrep
+//--------------------------------------------------------------------------------
+function d3plot(dataset, xMin, xMax, yMin, yMax)
+{
+  var width = plotDiv.width();
+  var height = plotDiv.height();
+
+  padding = 50;
+  xScale = d3.scale.linear()
+                 .domain([xMin,xMax])
+                 .range([padding,width-padding]);
+
+  yScale = d3.scale.linear()
+                 .domain([yMin, yMax])
+                 .range([height-padding, padding]); // note inversion 
+
+
+
+    // must remove the svg from a d3-selected object, not just a jQuery object
+  d3plotDiv.select("#plotSVG").remove();  // so that append("svg") is not cumulative
+
+  d3brush = d3.svg.brush()
+        .x(xScale)
+        .y(yScale)
+        .on("brushend", brushReader);
+
+
+  var svg = d3.select("#browserHeatmapDiv")
+      .append("svg")
+      .attr("id", "plotSVG")
+      .attr("width", width)
+      .attr("height", height)
+      .call(d3brush);
+
+  xAxis = d3.svg.axis()
+                .scale(xScale)
+                .ticks(10)
+                .orient("bottom")
+                .tickSize(10);
+
+  yAxis = d3.svg.axis()
+                .scale(yScale)
+                .ticks(10)
+                .tickSize(10)
+                .orient("left");
+
+
+  var xTranslationForYAxis = xScale(0);
+  var yTranslationForXAxis = yScale(10);
+
+  var tooltip = d3plotDiv.append("div")
+                   .attr("class", "tooltip")
+                   .style("position", "absolute")
+                   .style("z-index", "10")
+                   .style("visibility", "hidden")
+                   .text("a simple tooltip");
+
+   svg.selectAll("circle")
+      .data(dataset)
+      .enter()
+      .append("circle")
+      .attr("cx", function(d){
+         return xScale(d.x);
+        })
+      .attr("cy", function(d){
+         return yScale(d.y);
+         })
+      .attr("r", function(d){
+        return 5;
+        })
+      .style("fill", function(d){
+        return "red";
+        })
+      .on("mouseover", function(d,i){   // no id assigned yet...
+         tooltip.text(d.id);
+         return tooltip.style("visibility", "visible");
+         })
+      .on("mousemove", function(){
+         return tooltip.style("top",
+                (d3.event.pageY-10)+"px").style("left",(d3.event.pageX+10)+"px");})
+      .on("mouseout", function(){return tooltip.style("visibility", "hidden");});
+
+   svg.append("g")
+      .attr("class", "axis") 
+      .attr("transform", "translate(0," + (height - padding) + ")")
+      .call(xAxis);
+
+   svg.append("g")
+      .attr("class", "axis") 
+      .attr("transform", "translate(" + padding + ",0)")
+      .call(yAxis);
+
+} // d3plot
+//--------------------------------------------------------------------------------
+function getSelection(msg)
+{
+   var selectedNames = [];
+
+   if(selectedRegion == null){
+      var returnMsg = {cmd: msg.callback, callback: "", status: "success", 
+                        payload: selectedNames};
+      console.log("=== returning from getSelection, 1");
+      console.log(returnMsg);
+      hub.send(returnMsg);
+      return;
+      }
+
+
+   x0 = selectedRegion[0][0]
+   x1 = selectedRegion[1][0]
+   y0 = selectedRegion[0][1]
+   y1 = selectedRegion[1][1]
+
+   for(var i=0; i < datasetLength; i++){
+      x = dataset[i].x;
+      y = dataset[i].y;
+      if(x >= x0 & x <= x1 & y >= y0 & y <= y1) {
+        console.log ("TRUE");
+        selectedNames.push("point " + i);
+        }
+     } // for i
+
+   console.log(" found " + selectedNames.length + " selected points");
+   var returnMsg = {cmd: msg.callback, callback: "", status: "success", 
+                    payload: selectedNames};
+
+   console.log("=== returning from getSelection, 2");
+   console.log(returnMsg);
+   hub.send(returnMsg);
+
+} // getSelection
+//--------------------------------------------------------------------------------
+
+  return({
+    setHub: setHub,
+    addMessageHandlers: addMessageHandlers,
+    initializeUI: initializeUI
+    });
+
+}); // BrowserHeatmap
+//--------------------------------------------------------------------------------
+
+hub = BrowserViz();
+heatmap = BrowserHeatmap()
+heatmap.setHub(hub)
+heatmap.addMessageHandlers();
+
+//heatmap.init(hub);
+var f = heatmap.initializeUI;
+
+hub.addOnDocumentReadyFunction(f);
+hub.start();
+
+//--------------------------------------------------------------------------------
+</script>
+
+</head>
+<body>
+  <div id="browserHeatmapDiv"></div>
+</body>
+</html>
+

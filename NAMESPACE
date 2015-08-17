@@ -1,0 +1,16 @@
+exportClasses(BrowserHeatmapClass)
+
+exportMethods (
+   plot,
+   getSelection
+   )
+
+export(
+   BrowserHeatmap
+   )
+
+importClassesFrom(methods, character, integer)
+importFrom(methods, new)
+
+import(BrowserViz)
+import(BiocGenerics)

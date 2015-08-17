@@ -1,0 +1,14 @@
+Package: BrowserHeatmap
+Type: Package
+Title: BrowserHeatmap: a BrowserViz subclass for displaying heatmaps
+Version: 0.99.0
+Date: 2015-08-16
+Author: Paul Shannon
+Maintainer: Paul Shannon <pshannon@fredhutch.org>
+Depends: R (>= 3.2.1), BrowserViz
+Imports: methods, BiocGenerics
+Suggests: RUnit, BiocStyle
+Description: A BrowserViz subclassing example, xy plotting in the browser using d3
+License: GPL-2
+LazyLoad: yes
+biocViews: Visualization, ThirdPartyClient
