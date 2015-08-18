@@ -7,7 +7,7 @@ in javascript using the matrix passed from R.
 To install and run the unit tests:
 
 *  Needs the BrowserViz base class: biocLite("BrowserViz")
-*  R CMD INSTALL BrowserViz
+*  R CMD INSTALL BrowserViz   (need to be in the devel branch)
 *  Similarly with httpuv
 *  R CMD INSTAL BrowserHeatmap
 *  cd BrowserHeatmap/inst/unitests
