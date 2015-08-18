@@ -162,18 +162,20 @@ function d3plotPrep (msg)
 
       // assign global variables
 
-   dataset = [];
-   datasetLength = payload.x.length
-
    var rownames = payload.rownames;
    var colnames = payload.colnames;
    var matrix = payload.matrix
-   var xVector = payload.x;
-   var yVector = payload.y;
+     // extract first and second rows: they should produce an xy plot, randomly different on each call
+   var xVector = matrix[0];
+   var yVector = matrix[1];
+
    xMin = payload.xMin;
    xMax = payload.xMax;
    yMin = payload.yMin;
    yMax = payload.yMax
+
+   dataset = [];
+   var datasetLength = xVector.length;
 
    for(var i=0; i < datasetLength; i++){
      dataset.push({x: xVector[i], y: yVector[i]});
