@@ -1,5 +1,8 @@
 # BrowserHeatmap
-An interactive d3  heatmap created from, and interactive with, an R session
+An interactive d3  heatmap created from, and interactive with, an R session.
+This is only a roughed-in, largely an unmodifed version of the xyplotting BrowserVizDemo
+package, ready for anyone who will implement a d3 (or other) heatmap display
+in javascript using the matrix passed from R.
 
 To install and run the unit tests:
 
