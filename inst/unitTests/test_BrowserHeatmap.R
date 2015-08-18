@@ -7,7 +7,7 @@ runTests <- function()
 {
   testConstructor();
   testWindowTitle()
-  testPlot()
+  testDisplay()
   
 } # runTests
 #--------------------------------------------------------------------------------
@@ -16,7 +16,7 @@ testConstructor <- function()
    print("--- testConstructor")
    app <- BrowserHeatmap(quiet=FALSE, portRange=PORTS);
    checkTrue(ready(app))
-   checkEquals(port(app), 8000)
+   checkTrue(port(app) %in% PORTS)
    closeWebSocket(app)
    checkTrue(!ready(app))
    
@@ -34,24 +34,37 @@ testWindowTitle <- function()
 
 } # testWindowTitle
 #--------------------------------------------------------------------------------
-testPlot <- function()
+testDisplay <- function()
 {
-   print("--- testPlot")
+   print("--- testDisplay")
    app <- BrowserHeatmap(portRange=PORTS);
    checkTrue(ready(app))
 
-   title <- "simple xy plot test";
+   title <- "simple heatmap test";
    setBrowserWindowTitle(app, title)
    checkEquals(getBrowserWindowTitle(app), title)
 
-   checkEquals(getSelection(app), list())
+   matrix <- matrix(sample(1:1000, size=20)/1000, nrow=4, dimnames=list(LETTERS[1:4], letters[1:5]))
+   display(app, matrix)
 
-   plot(app, 1:10, (1:10)^2)
-     # without direct manipulation of the plotted surface, there will still
-     # be no selections
+} # testDisplay
+#--------------------------------------------------------------------------------
+# good use:
+#   app <- demo()
+#   select some points in the browser with your mouse, then
+#   getSelection(app)
+#
+demo <- function()
+{
+   app <- BrowserHeatmap(portRange=PORTS);
+   title <- "simple heatmap demo";
+   setBrowserWindowTitle(app, title)
 
-   checkEquals(getSelection(app), list())
-   closeWebSocket(app)
+   matrix <- matrix(sample(1:1000, size=20)/1000, nrow=4, dimnames=list(LETTERS[1:4], letters[1:5]))
 
-} # testPlot
+   display(app, matrix)
+
+   app
+
+} # demo
 #--------------------------------------------------------------------------------

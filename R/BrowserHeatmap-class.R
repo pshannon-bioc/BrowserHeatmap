@@ -10,7 +10,7 @@ browserHeatmapBrowserFile <- system.file(package="BrowserHeatmap", "scripts", "h
                             )
 
 #----------------------------------------------------------------------------------------------------
-setGeneric ('plot',  signature='obj', function (obj, x, y) standardGeneric ('plot'))
+setGeneric ('display',  signature='obj', function (obj, matrix) standardGeneric ('display'))
 setGeneric ('getSelection',  signature='obj', function (obj) standardGeneric ('getSelection'))
 #----------------------------------------------------------------------------------------------------
 setupMessageHandlers <- function()
@@ -31,17 +31,30 @@ BrowserHeatmap = function(portRange, host="localhost", title="BrowserHeatmap", q
 
 } # BrowserHeatmap: constructor
 #----------------------------------------------------------------------------------------------------
-setMethod('plot', 'BrowserHeatmapClass',
-
-  function (obj, x, y) {
+setMethod('display', 'BrowserHeatmapClass',
+          
+  function (obj, matrix) {
+     x <- matrix[1,]
+     y <- matrix[2,]
      xMin <- min(x)
      xMax <- max(x)
      yMin <- min(y)
      yMax <- max(y)
-     send(obj, list(cmd="plotxy", callback="handleResponse", status="request",
-                    payload=list(x=x, y=y, xMin=xMin, xMax=xMax, yMin=yMin, yMax=yMax)))
+
+     payload <- list(rownames=rownames(matrix),
+                     colnames=colnames(matrix),
+                     matrix=matrix,
+                     x=x,
+                     y=y,
+                     xMin=xMin,
+                     xMax=xMax,
+                     yMin=yMin,
+                     yMax=yMax);
+     
+     send(obj, list(cmd="displayHeatmap", callback="handleResponse", status="request",
+                    payload=payload));
      while (!browserResponseReady(obj)){
-        if(!obj@quiet) message(sprintf("plot waiting for browser response"));
+        if(!obj@quiet) message(sprintf("displayHeatmap waiting for browser response"));
         Sys.sleep(.1)
         }
      getBrowserResponse(obj)

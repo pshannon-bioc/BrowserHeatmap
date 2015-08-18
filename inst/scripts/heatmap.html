@@ -68,7 +68,7 @@ function setHub(newHub)
 //----------------------------------------------------------------------------------------------------
 function addMessageHandlers()
 {
-   hub.addMessageHandler("plotxy", d3plotPrep);
+   hub.addMessageHandler("displayHeatmap", d3plotPrep);
    hub.addMessageHandler("getSelection", getSelection);
    //hub.addMessageHandler("selectPoints", selectPoints);
 
@@ -143,18 +143,6 @@ function getWindowSize(msg)
 
 } // getWindowSize
 //----------------------------------------------------------------------------------------------------
-$(document).ready(function() {
-
-   plotDiv = $("#browserHeatmapDiv");
-   d3plotDiv = d3.select("#browserHeatmapDiv");
-   console.log("div: " + plotDiv)
-
-   $(window).resize(handleWindowResize);
-   handleWindowResize();
-
-   }) // document.ready
-
-//----------------------------------------------------------------------------------------------------
 function brushReader ()
 {
   console.log("brushReader");
@@ -177,14 +165,19 @@ function d3plotPrep (msg)
    dataset = [];
    datasetLength = payload.x.length
 
-   for(var i=0; i < datasetLength; i++){
-     dataset.push({x: payload.x[i], y: payload.y[i]});
-     }
+   var rownames = payload.rownames;
+   var colnames = payload.colnames;
+   var matrix = payload.matrix
+   var xVector = payload.x;
+   var yVector = payload.y;
+   xMin = payload.xMin;
+   xMax = payload.xMax;
+   yMin = payload.yMin;
+   yMax = payload.yMax
 
-   xMin = msg.payload.xMin;
-   xMax = msg.payload.xMax;
-   yMin = msg.payload.yMin;
-   yMax = msg.payload.yMax;
+   for(var i=0; i < datasetLength; i++){
+     dataset.push({x: xVector[i], y: yVector[i]});
+     }
 
    d3plot(dataset, xMin, xMax, yMin, yMax)
 
@@ -338,9 +331,7 @@ heatmap = BrowserHeatmap()
 heatmap.setHub(hub)
 heatmap.addMessageHandlers();
 
-//heatmap.init(hub);
 var f = heatmap.initializeUI;
-
 hub.addOnDocumentReadyFunction(f);
 hub.start();
 

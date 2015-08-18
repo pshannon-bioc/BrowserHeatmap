@@ -1,8 +1,8 @@
 Package: BrowserHeatmap
 Type: Package
 Title: BrowserHeatmap: a BrowserViz subclass for displaying heatmaps
-Version: 0.99.0
-Date: 2015-08-16
+Version: 0.99.1
+Date: 2015-08-17
 Author: Paul Shannon
 Maintainer: Paul Shannon <pshannon@fredhutch.org>
 Depends: R (>= 3.2.1), BrowserViz
